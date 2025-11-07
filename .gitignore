@@ -1,0 +1,23 @@
+﻿# Database credentials
+/includes/config.php
+
+# Environment files
+.env
+*.env
+
+# Log files
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
