@@ -1,6 +1,29 @@
 <?php
 session_start();
+
+$success = "";
+$error = "";
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $name = trim($_POST['name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $confirm_password = $_POST['confirm_password'] ?? '';
+    
+    // Basic validation
+    if (empty($name) || empty($email) || empty($password)) {
+        $error = "All fields are required";
+    } elseif ($password !== $confirm_password) {
+        $error = "Passwords do not match";
+    } elseif (strlen($password) < 6) {
+        $error = "Password must be at least 6 characters long";
+    } else {
+        // In a real application, you'd save to database here
+        $success = "Registration successful! You can now login with your credentials.";
+    }
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -17,15 +40,25 @@ session_start();
                 <p>Join SkyPort Manager system</p>
             </div>
             
+            <?php if (!empty($error)): ?>
+                <div class="alert alert-danger"><?php echo $error; ?></div>
+            <?php endif; ?>
+            
+            <?php if (!empty($success)): ?>
+                <div class="alert alert-success"><?php echo $success; ?></div>
+            <?php endif; ?>
+            
             <form method="POST" class="auth-form">
                 <div class="form-group">
                     <label for="name">Full Name</label>
-                    <input type="text" id="name" name="name" required class="form-control">
+                    <input type="text" id="name" name="name" required class="form-control" 
+                           value="<?php echo htmlspecialchars($_POST['name'] ?? ''); ?>">
                 </div>
                 
                 <div class="form-group">
                     <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email" required class="form-control">
+                    <input type="email" id="email" name="email" required class="form-control"
+                           value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
                 </div>
                 
                 <div class="form-group">
