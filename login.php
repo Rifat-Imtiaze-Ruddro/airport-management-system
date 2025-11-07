@@ -1,26 +1,40 @@
 <?php
 session_start();
-
-// Demo credentials - replace with database later
-$valid_username = "admin";
-$valid_password = "password";
+include 'includes/config.php';
 
 $error = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $username = $_POST['username'] ?? '';
-    $password = $_POST['password'] ?? '';
+    $email = trim($_POST['email'] ?? '');
+    $password = trim($_POST['password'] ?? '');
     
-    if ($username === $valid_username && $password === $valid_password) {
-        $_SESSION['user_id'] = 1;
-        $_SESSION['user_name'] = "Airport Administrator";
-        $_SESSION['user_role'] = "admin";
-        $_SESSION['logged_in'] = true;
-        
-        header("Location: dashboard.php");
-        exit();
+    if (!empty($email) && !empty($password)) {
+        // For demo purposes - simple authentication
+        // In production, use password_verify() with hashed passwords
+        if ($email === 'admin@airport.com' && $password === 'password') {
+            // Get user from database
+            $sql = "SELECT * FROM users WHERE email = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("s", $email);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            if ($result->num_rows === 1) {
+                $user = $result->fetch_assoc();
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['user_name'] = $user['name'];
+                $_SESSION['user_role'] = $user['role'];
+                $_SESSION['user_airline'] = $user['airline'];
+                $_SESSION['logged_in'] = true;
+                
+                header("Location: dashboard.php");
+                exit();
+            }
+        } else {
+            $error = "Invalid email or password. Use: admin@airport.com / password";
+        }
     } else {
-        $error = "Invalid username or password. Use: admin / password";
+        $error = "Please enter both email and password";
     }
 }
 ?>
@@ -49,9 +63,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             
             <form method="POST" class="auth-form">
                 <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="username" required class="form-control" 
-                           value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" required class="form-control" 
+                           value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
                 </div>
                 
                 <div class="form-group">
@@ -64,7 +78,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             
             <div class="demo-credentials">
                 <p><strong>Demo Credentials:</strong></p>
-                <p>Username: <strong>admin</strong></p>
+                <p>Email: <strong>admin@airport.com</strong></p>
                 <p>Password: <strong>password</strong></p>
             </div>
             

@@ -1,11 +1,68 @@
 <?php
 session_start();
+include 'includes/config.php';
+include 'includes/auth.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     header("Location: login.php");
     exit();
 }
+
+// Get statistics from database
+$flights_count = 0;
+$services_count = 0;
+$pending_requests = 0;
+$messages_count = 0;
+
+// Count scheduled flights
+$sql = "SELECT COUNT(*) as count FROM flights WHERE status = 'scheduled'";
+$result = $conn->query($sql);
+if ($result) {
+    $flights_count = $result->fetch_assoc()['count'];
+}
+
+// Count active services
+$sql = "SELECT COUNT(*) as count FROM service_requests WHERE status IN ('pending', 'in_progress')";
+$result = $conn->query($sql);
+if ($result) {
+    $services_count = $result->fetch_assoc()['count'];
+}
+
+// Count pending requests
+$sql = "SELECT COUNT(*) as count FROM service_requests WHERE status = 'pending'";
+$result = $conn->query($sql);
+if ($result) {
+    $pending_requests = $result->fetch_assoc()['count'];
+}
+
+// Count unread messages
+$sql = "SELECT COUNT(*) as count FROM communications WHERE recipient_id = ? AND is_read = 0";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $_SESSION['user_id']);
+$stmt->execute();
+$result = $stmt->get_result();
+if ($result) {
+    $messages_count = $result->fetch_assoc()['count'];
+}
+
+// Get today's flights
+$sql = "SELECT f.*, a.airline_name, a.airline_code 
+        FROM flights f 
+        JOIN airlines a ON f.airline_id = a.id 
+        WHERE DATE(f.scheduled_departure) = CURDATE() 
+        ORDER BY f.scheduled_departure 
+        LIMIT 5";
+$today_flights = $conn->query($sql);
+
+// Get recent service requests
+$sql = "SELECT sr.*, f.flight_number, a.airline_code 
+        FROM service_requests sr 
+        JOIN flights f ON sr.flight_id = f.id 
+        JOIN airlines a ON f.airline_id = a.id 
+        ORDER BY sr.created_at DESC 
+        LIMIT 3";
+$recent_services = $conn->query($sql);
 ?>
 
 <!DOCTYPE html>
@@ -47,19 +104,19 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
                 
                 <div class="stats">
                     <div class="stat-card">
-                        <h3>12</h3>
+                        <h3><?php echo $flights_count; ?></h3>
                         <p>Scheduled Flights</p>
                     </div>
                     <div class="stat-card">
-                        <h3>8</h3>
+                        <h3><?php echo $services_count; ?></h3>
                         <p>Active Services</p>
                     </div>
                     <div class="stat-card">
-                        <h3>3</h3>
+                        <h3><?php echo $pending_requests; ?></h3>
                         <p>Pending Requests</p>
                     </div>
                     <div class="stat-card">
-                        <h3>5</h3>
+                        <h3><?php echo $messages_count; ?></h3>
                         <p>New Messages</p>
                     </div>
                 </div>
@@ -70,47 +127,37 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
                             <h2>📅 Today's Flight Schedule</h2>
                         </div>
                         <div class="card-body">
-                            <div class="flight-item">
-                                <span class="flight-number">AA245</span>
-                                <span class="flight-route">JFK → LHR</span>
-                                <span class="flight-time">14:30 - 15:45</span>
-                                <span class="status status-scheduled">Scheduled</span>
-                            </div>
-                            <div class="flight-item">
-                                <span class="flight-number">DL189</span>
-                                <span class="flight-route">ATL → CDG</span>
-                                <span class="flight-time">15:00 - 16:20</span>
-                                <span class="status status-boarding">Boarding</span>
-                            </div>
-                            <div class="flight-item">
-                                <span class="flight-number">UA076</span>
-                                <span class="flight-route">ORD → FRA</span>
-                                <span class="flight-time">16:15 - 17:30</span>
-                                <span class="status status-delayed">Delayed</span>
-                            </div>
+                            <?php if ($today_flights && $today_flights->num_rows > 0): ?>
+                                <?php while($flight = $today_flights->fetch_assoc()): ?>
+                                    <div class="flight-item">
+                                        <span class="flight-number"><?php echo $flight['airline_code'] . $flight['flight_number']; ?></span>
+                                        <span class="flight-route"><?php echo $flight['origin'] . ' → ' . $flight['destination']; ?></span>
+                                        <span class="flight-time"><?php echo date('H:i', strtotime($flight['scheduled_departure'])); ?></span>
+                                        <span class="status status-<?php echo $flight['status']; ?>"><?php echo ucfirst($flight['status']); ?></span>
+                                    </div>
+                                <?php endwhile; ?>
+                            <?php else: ?>
+                                <p>No flights scheduled for today.</p>
+                            <?php endif; ?>
                         </div>
                     </div>
                     
                     <div class="card">
                         <div class="card-header">
-                            <h2>🔔 Recent Notifications</h2>
+                            <h2>🔔 Recent Service Requests</h2>
                         </div>
                         <div class="card-body">
-                            <div class="notification">
-                                <strong>Gate Change</strong>
-                                <p>Flight BA123 moved from Gate A12 to B08</p>
-                                <small>10 minutes ago</small>
-                            </div>
-                            <div class="notification">
-                                <strong>New Service Request</strong>
-                                <p>Fueling requested for Flight DL189</p>
-                                <small>25 minutes ago</small>
-                            </div>
-                            <div class="notification">
-                                <strong>Weather Alert</strong>
-                                <p>Possible delays due to incoming weather</p>
-                                <small>1 hour ago</small>
-                            </div>
+                            <?php if ($recent_services && $recent_services->num_rows > 0): ?>
+                                <?php while($service = $recent_services->fetch_assoc()): ?>
+                                    <div class="notification">
+                                        <strong><?php echo ucfirst($service['service_type']); ?> - <?php echo $service['airline_code'] . $service['flight_number']; ?></strong>
+                                        <p>Status: <?php echo ucfirst(str_replace('_', ' ', $service['status'])); ?></p>
+                                        <small><?php echo date('M j, H:i', strtotime($service['requested_time'])); ?></small>
+                                    </div>
+                                <?php endwhile; ?>
+                            <?php else: ?>
+                                <p>No recent service requests.</p>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
