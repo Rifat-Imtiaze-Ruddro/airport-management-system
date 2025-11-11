@@ -165,10 +165,6 @@ $recent_services = $conn->query($sql);
         </div>
     </div>
     
-    <footer>
-        <div class="container">
-            <p>&copy; 2023 SkyPort Manager. All rights reserved.</p>
-        </div>
-    </footer>
+    
 </body>
 </html>
