@@ -10,7 +10,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $password = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
     
-    // Basic validation
+    // No empty fields checnking
     if (empty($name) || empty($email) || empty($password)) {
         $error = "All fields are required";
     } elseif ($password !== $confirm_password) {
@@ -18,7 +18,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     } elseif (strlen($password) < 6) {
         $error = "Password must be at least 6 characters long";
     } else {
-        // In a real application, you'd save to database here
+        //solve the database overwriting issue first
+        // save_to_database() write later
+        //need to fix hashing password
         $success = "Registration successful! You can now login with your credentials.";
     }
 }

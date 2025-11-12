@@ -9,8 +9,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $password = trim($_POST['password'] ?? '');
     
     if (!empty($email) && !empty($password)) {
-        // For demo purposes - simple authentication
-        // In production, use password_verify() with hashed passwords
+        // Back to Demo login, the old one had issues
+        // password_verify() write later here 
         if ($email === 'admin@airport.com' && $password === 'password') {
             // Get user from database
             $sql = "SELECT * FROM users WHERE email = ?";
