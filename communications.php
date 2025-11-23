@@ -68,9 +68,9 @@ requireLogin();
     </div>
     
     <footer>
-        <div class="container">
-            <p>&copy; 2023 Airport Management System. All rights reserved.</p>
-        </div>
+    <div class="container">
+        <p>&copy; <?php echo date('Y'); ?> Airport Management System</p>
+    </div>
     </footer>
 </body>
 </html>
