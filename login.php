@@ -2,37 +2,43 @@
 session_start();
 include 'includes/config.php';
 
-$error = "";
+$error = '';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = trim($_POST['email'] ?? '');
     $password = trim($_POST['password'] ?? '');
     
     if (!empty($email) && !empty($password)) {
-        // Back to Demo login, the old one had issues
-        // password_verify() write later here 
-        if ($email === 'admin@airport.com' && $password === 'password') {
-            // Get user from database
-            $sql = "SELECT * FROM users WHERE email = ?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("s", $email);
-            $stmt->execute();
-            $result = $stmt->get_result();
+        // Check if user exists
+        $sql = "SELECT * FROM users WHERE email = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("s", $email);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows === 1) {
+            $user = $result->fetch_assoc();
             
-            if ($result->num_rows === 1) {
-                $user = $result->fetch_assoc();
+            // for hashing later
+            //if (password_verify($password, $user['password'])) {
+            if ($password === $user['password']) {
+                // Session sets
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['user_name'] = $user['name'];
                 $_SESSION['user_role'] = $user['role'];
                 $_SESSION['user_airline'] = $user['airline'];
                 $_SESSION['logged_in'] = true;
                 
+                // Role based access
                 header("Location: dashboard.php");
                 exit();
+            } else {
+                $error = "Invalid email or password";
             }
         } else {
-            $error = "Invalid email or password. Use: admin@airport.com / password";
+            $error = "Invalid email or password";
         }
+        $stmt->close();
     } else {
         $error = "Please enter both email and password";
     }
@@ -44,14 +50,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - SkyPort Manager</title>
+    <title>Login - Airport Management System</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="auth-page">
     <div class="auth-container">
         <div class="auth-card">
             <div class="auth-header">
-                <h1>Login to SkyPort</h1>
+                <h1>Login to Airport System</h1>
                 <p>Enter your credentials to access the system</p>
             </div>
             
@@ -78,8 +84,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             
             <div class="demo-credentials">
                 <p><strong>Demo Credentials:</strong></p>
-                <p>Email: <strong>admin@airport.com</strong></p>
-                <p>Password: <strong>password</strong></p>
+                <p>Admin: <strong>admin@airport.com</strong> / <strong>password</strong></p>
+                <p>Airline Staff: <strong>john@americanair.com</strong> / <strong>password</strong></p>
+                <p>Service Staff: <strong>sarah@delta.com</strong> / <strong>password</strong></p>
             </div>
             
             <div class="auth-footer">

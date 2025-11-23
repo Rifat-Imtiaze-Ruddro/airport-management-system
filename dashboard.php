@@ -3,13 +3,9 @@ session_start();
 include 'includes/config.php';
 include 'includes/auth.php';
 
-// Check if user is logged in
-if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
-    header("Location: login.php");
-    exit();
-}
+requireLogin();
 
-// Get statistics from database
+
 $flights_count = 0;
 $services_count = 0;
 $pending_requests = 0;
@@ -36,7 +32,7 @@ if ($result) {
     $pending_requests = $result->fetch_assoc()['count'];
 }
 
-// Count unread messages
+// Count unread messages for current user
 $sql = "SELECT COUNT(*) as count FROM communications WHERE recipient_id = ? AND is_read = 0";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $_SESSION['user_id']);
@@ -45,24 +41,6 @@ $result = $stmt->get_result();
 if ($result) {
     $messages_count = $result->fetch_assoc()['count'];
 }
-
-// Get today's flights
-$sql = "SELECT f.*, a.airline_name, a.airline_code 
-        FROM flights f 
-        JOIN airlines a ON f.airline_id = a.id 
-        WHERE DATE(f.scheduled_departure) = CURDATE() 
-        ORDER BY f.scheduled_departure 
-        LIMIT 5";
-$today_flights = $conn->query($sql);
-
-// Get recent service requests
-$sql = "SELECT sr.*, f.flight_number, a.airline_code 
-        FROM service_requests sr 
-        JOIN flights f ON sr.flight_id = f.id 
-        JOIN airlines a ON f.airline_id = a.id 
-        ORDER BY sr.created_at DESC 
-        LIMIT 3";
-$recent_services = $conn->query($sql);
 ?>
 
 <!DOCTYPE html>
@@ -70,7 +48,7 @@ $recent_services = $conn->query($sql);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - SkyPort Manager</title>
+    <title>Dashboard - Airport Management System</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -82,10 +60,30 @@ $recent_services = $conn->query($sql);
                 <h3>🏢 Airport Portal</h3>
                 <ul>
                     <li><a href="dashboard.php" class="active">📊 Dashboard</a></li>
+                    
+                    <?php if (canAccessFlightManagement()): ?>
                     <li><a href="flights.php">✈️ Flight Schedule</a></li>
+                    <?php else: ?>
+                    <li class="access-restricted"><a href="flights.php">✈️ Flight Schedule</a></li>
+                    <?php endif; ?>
+                    
+                    <?php if (canAccessServiceRequests()): ?>
                     <li><a href="services.php">🔧 Service Requests</a></li>
+                    <?php else: ?>
+                    <li class="access-restricted"><a href="services.php">🔧 Service Requests</a></li>
+                    <?php endif; ?>
+                    
                     <li><a href="communications.php">💬 Communications</a></li>
                 </ul>
+                
+                <div class="user-role-display">
+                    <p><strong>Your Role:</strong> 
+                    <span class="role-badge role-<?php echo $_SESSION['user_role']; ?>">
+                        <?php echo ucfirst(str_replace('_', ' ', $_SESSION['user_role'])); ?>
+                    </span>
+                    </p>
+                    <p><strong>Airline:</strong> <?php echo $_SESSION['user_airline']; ?></p>
+                </div>
                 
                 <h3>✈️ Airline Services</h3>
                 <ul>
@@ -127,16 +125,29 @@ $recent_services = $conn->query($sql);
                             <h2>📅 Today's Flight Schedule</h2>
                         </div>
                         <div class="card-body">
-                            <?php if ($today_flights && $today_flights->num_rows > 0): ?>
-                                <?php while($flight = $today_flights->fetch_assoc()): ?>
-                                    <div class="flight-item">
-                                        <span class="flight-number"><?php echo $flight['airline_code'] . $flight['flight_number']; ?></span>
-                                        <span class="flight-route"><?php echo $flight['origin'] . ' → ' . $flight['destination']; ?></span>
-                                        <span class="flight-time"><?php echo date('H:i', strtotime($flight['scheduled_departure'])); ?></span>
-                                        <span class="status status-<?php echo $flight['status']; ?>"><?php echo ucfirst($flight['status']); ?></span>
-                                    </div>
-                                <?php endwhile; ?>
-                            <?php else: ?>
+                            <?php 
+                            // Get today's flights
+                            $sql = "SELECT f.*, a.airline_name, a.airline_code 
+                                    FROM flights f 
+                                    JOIN airlines a ON f.airline_id = a.id 
+                                    WHERE DATE(f.scheduled_departure) = CURDATE() 
+                                    ORDER BY f.scheduled_departure 
+                                    LIMIT 5";
+                            $today_flights = $conn->query($sql);
+                            
+                            if ($today_flights && $today_flights->num_rows > 0): 
+                                while($flight = $today_flights->fetch_assoc()): 
+                            ?>
+                                <div class="flight-item">
+                                    <span class="flight-number"><?php echo $flight['airline_code'] . $flight['flight_number']; ?></span>
+                                    <span class="flight-route"><?php echo $flight['origin'] . ' → ' . $flight['destination']; ?></span>
+                                    <span class="flight-time"><?php echo date('H:i', strtotime($flight['scheduled_departure'])); ?></span>
+                                    <span class="status status-<?php echo $flight['status']; ?>"><?php echo ucfirst($flight['status']); ?></span>
+                                </div>
+                            <?php 
+                                endwhile;
+                            else: 
+                            ?>
                                 <p>No flights scheduled for today.</p>
                             <?php endif; ?>
                         </div>
@@ -147,15 +158,28 @@ $recent_services = $conn->query($sql);
                             <h2>🔔 Recent Service Requests</h2>
                         </div>
                         <div class="card-body">
-                            <?php if ($recent_services && $recent_services->num_rows > 0): ?>
-                                <?php while($service = $recent_services->fetch_assoc()): ?>
-                                    <div class="notification">
-                                        <strong><?php echo ucfirst($service['service_type']); ?> - <?php echo $service['airline_code'] . $service['flight_number']; ?></strong>
-                                        <p>Status: <?php echo ucfirst(str_replace('_', ' ', $service['status'])); ?></p>
-                                        <small><?php echo date('M j, H:i', strtotime($service['requested_time'])); ?></small>
-                                    </div>
-                                <?php endwhile; ?>
-                            <?php else: ?>
+                            <?php 
+                            // Get recent service requests
+                            $sql = "SELECT sr.*, f.flight_number, a.airline_code 
+                                    FROM service_requests sr 
+                                    JOIN flights f ON sr.flight_id = f.id 
+                                    JOIN airlines a ON f.airline_id = a.id 
+                                    ORDER BY sr.created_at DESC 
+                                    LIMIT 3";
+                            $recent_services = $conn->query($sql);
+                            
+                            if ($recent_services && $recent_services->num_rows > 0): 
+                                while($service = $recent_services->fetch_assoc()): 
+                            ?>
+                                <div class="notification">
+                                    <strong><?php echo ucfirst($service['service_type']); ?> - <?php echo $service['airline_code'] . $service['flight_number']; ?></strong>
+                                    <p>Status: <?php echo ucfirst(str_replace('_', ' ', $service['status'])); ?></p>
+                                    <small><?php echo date('M j, H:i', strtotime($service['requested_time'])); ?></small>
+                                </div>
+                            <?php 
+                                endwhile;
+                            else: 
+                            ?>
                                 <p>No recent service requests.</p>
                             <?php endif; ?>
                         </div>
@@ -165,6 +189,10 @@ $recent_services = $conn->query($sql);
         </div>
     </div>
     
-    
+    <footer>
+        <div class="container">
+            <p>&copy; 2023 Airport Management System. All rights reserved.</p>
+        </div>
+    </footer>
 </body>
 </html>

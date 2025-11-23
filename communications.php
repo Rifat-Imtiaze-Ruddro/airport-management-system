@@ -1,9 +1,9 @@
 <?php
 session_start();
-if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
-    header("Location: login.php");
-    exit();
-}
+include 'includes/config.php';
+include 'includes/auth.php';
+
+requireLogin();
 ?>
 
 <!DOCTYPE html>
@@ -11,7 +11,7 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Communications - FlightSync Manager</title>
+    <title>Communications - Airport Management System</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -21,6 +21,11 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
         <div class="page-header">
             <h1>💬 Communications</h1>
             <p>Airline-Airport correspondence system</p>
+            <div class="user-role">
+                <span class="role-badge role-<?php echo $_SESSION['user_role']; ?>">
+                    <?php echo ucfirst(str_replace('_', ' ', $_SESSION['user_role'])); ?>
+                </span>
+            </div>
         </div>
         
         <div class="card">
@@ -29,16 +34,43 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
                 <button class="btn btn-primary">New Message</button>
             </div>
             <div class="card-body">
-                <p>Communication system will be implemented here.</p>
-                <ul>
-                    <li>Send messages to airlines</li>
-                    <li>Receive service requests</li>
-                    <li>Emergency notifications</li>
-                    <li>Schedule updates</li>
-                    <li>General announcements</li>
-                </ul>
+                <p><strong>Access Level:</strong> All users can send and receive messages</p>
+                
+                <div class="messages-list">
+                    <div class="message-item">
+                        <div class="message-header">
+                            <strong>Gate Change Notification</strong>
+                            <span class="message-time">10:30 AM</span>
+                        </div>
+                        <div class="message-preview">
+                            Flight AA245 has been moved from Gate B12 to B15 due to operational requirements...
+                        </div>
+                        <div class="message-sender">
+                            From: Airport Administrator
+                        </div>
+                    </div>
+                    
+                    <div class="message-item unread">
+                        <div class="message-header">
+                            <strong>Fueling Request</strong>
+                            <span class="message-time">10:15 AM</span>
+                        </div>
+                        <div class="message-preview">
+                            Requesting priority fueling for Flight DL189. Running tight on turnaround time...
+                        </div>
+                        <div class="message-sender">
+                            From: John Smith - American Airlines
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2023 Airport Management System. All rights reserved.</p>
+        </div>
+    </footer>
 </body>
 </html>

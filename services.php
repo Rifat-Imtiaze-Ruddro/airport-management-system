@@ -1,9 +1,10 @@
 <?php
 session_start();
-if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
-    header("Location: login.php");
-    exit();
-}
+include 'includes/config.php';
+include 'includes/auth.php';
+
+// Check if user has permission
+requireRole(['administrator', 'airport_manager', 'airline_staff', 'service_staff']);
 ?>
 
 <!DOCTYPE html>
@@ -11,7 +12,7 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Services - SkyPort Manager</title>
+    <title>Services - Airport Management System</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -21,24 +22,84 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
         <div class="page-header">
             <h1>🔧 Service Requests</h1>
             <p>Manage airport service requests</p>
+            <div class="user-role">
+                <span class="role-badge role-<?php echo $_SESSION['user_role']; ?>">
+                    <?php echo ucfirst(str_replace('_', ' ', $_SESSION['user_role'])); ?>
+                </span>
+            </div>
         </div>
         
         <div class="card">
             <div class="card-header">
                 <h2>Service Management</h2>
+                <?php if (canAccessServiceRequests()): ?>
                 <button class="btn btn-primary">New Service Request</button>
+                <?php endif; ?>
             </div>
             <div class="card-body">
-                <p>Service request management system will be implemented here.</p>
-                <ul>
-                    <li>Ground handling services</li>
-                    <li>Fueling requests</li>
-                    <li>Catering services</li>
-                    <li>Cleaning services</li>
-                    <li>Maintenance requests</li>
-                </ul>
+                <p><strong>Access Level:</strong> 
+                <?php 
+                if (in_array($_SESSION['user_role'], ['administrator', 'airport_manager'])) {
+                    echo "Full access to all service requests";
+                } elseif ($_SESSION['user_role'] === 'airline_staff') {
+                    echo "Create and view service requests for " . $_SESSION['user_airline'];
+                } elseif ($_SESSION['user_role'] === 'service_staff') {
+                    echo "View and update assigned service requests";
+                }
+                ?>
+                </p>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Request ID</th>
+                            <th>Flight</th>
+                            <th>Service Type</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Requested</th>
+                            <?php if ($_SESSION['user_role'] !== 'service_staff'): ?>
+                            <th>Actions</th>
+                            <?php endif; ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>SR-2024-001</td>
+                            <td>AA245</td>
+                            <td>Fueling</td>
+                            <td><span class="status status-scheduled">High</span></td>
+                            <td><span class="status status-scheduled">Pending</span></td>
+                            <td>14:15</td>
+                            <?php if ($_SESSION['user_role'] !== 'service_staff'): ?>
+                            <td>
+                                <button class="btn btn-warning">Update</button>
+                            </td>
+                            <?php endif; ?>
+                        </tr>
+                        <tr>
+                            <td>SR-2024-002</td>
+                            <td>DL189</td>
+                            <td>Catering</td>
+                            <td><span class="status status-boarding">Normal</span></td>
+                            <td><span class="status status-boarding">In Progress</span></td>
+                            <td>14:30</td>
+                            <?php if ($_SESSION['user_role'] !== 'service_staff'): ?>
+                            <td>
+                                <button class="btn btn-warning">Update</button>
+                            </td>
+                            <?php endif; ?>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2023 Airport Management System. All rights reserved.</p>
+        </div>
+    </footer>
 </body>
 </html>
