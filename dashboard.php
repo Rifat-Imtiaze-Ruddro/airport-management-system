@@ -33,23 +33,24 @@ if ($result) {
 }
 
 // Count unread messages for current user
-$sql = "SELECT COUNT(*) as count FROM communications WHERE recipient_id = ? AND is_read = 0";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $_SESSION['user_id']);
-$stmt->execute();
-$result = $stmt->get_result();
-if ($result) {
-    $messages_count = $result->fetch_assoc()['count'];
-}
-?>
+$sql = "SELECT COUNT(*) as count 
+        FROM message_recipients mr
+        JOIN communications c ON mr.message_id = c.id
+        WHERE mr.recipient_id = ? 
+        AND mr.is_read = 0
+        AND mr.is_deleted = 0
+        AND c.is_archived = 0";
 
+$pageTitle = "Dashboard";
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Airport Management System</title>
+    <title><?php echo $pageTitle; ?> - Airport Management System</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <?php include 'includes/header.php'; ?>
@@ -57,42 +58,49 @@ if ($result) {
     <div class="container">
         <div class="dashboard">
             <div class="sidebar">
-                <h3>🏢 Airport Portal</h3>
-                <ul>
-                    <li><a href="dashboard.php" class="active">📊 Dashboard</a></li>
-                    
-                    <?php if (canAccessFlightManagement()): ?>
-                    <li><a href="flights.php">✈️ Flight Schedule</a></li>
-                    <?php else: ?>
-                    <li class="access-restricted"><a href="flights.php">✈️ Flight Schedule</a></li>
-                    <?php endif; ?>
-                    
-                    <?php if (canAccessServiceRequests()): ?>
-                    <li><a href="services.php">🔧 Service Requests</a></li>
-                    <?php else: ?>
-                    <li class="access-restricted"><a href="services.php">🔧 Service Requests</a></li>
-                    <?php endif; ?>
-                    
-                    <li><a href="communications.php">💬 Communications</a></li>
-                </ul>
-                
-                <div class="user-role-display">
-                    <p><strong>Your Role:</strong> 
-                    <span class="role-badge role-<?php echo $_SESSION['user_role']; ?>">
-                        <?php echo ucfirst(str_replace('_', ' ', $_SESSION['user_role'])); ?>
-                    </span>
-                    </p>
-                    <p><strong>Airline:</strong> <?php echo $_SESSION['user_airline']; ?></p>
-                </div>
-                
-                <h3>✈️ Airline Services</h3>
-                <ul>
-                    <li><a href="#">🛬 Gate Assignment</a></li>
-                    <li><a href="#">⛽ Fuel Services</a></li>
-                    <li><a href="#">🍱 Catering</a></li>
-                    <li><a href="#">🧹 Cleaning</a></li>
-                </ul>
-            </div>
+    <h3><i class="fas fa-airport"></i> Airport Portal</h3>
+    <ul>
+        <li><a href="dashboard.php" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+        
+        <?php if (canAccessFlightManagement()): ?>
+        <li><a href="flights.php"><i class="fas fa-plane"></i> Flight Schedule</a></li>
+        <?php else: ?>
+        <li class="access-restricted"><a href="flights.php"><i class="fas fa-plane"></i> Flight Schedule</a></li>
+        <?php endif; ?>
+        
+        <?php if (canAccessServiceRequests()): ?>
+        <li><a href="services.php"><i class="fas fa-tools"></i> Service Requests</a></li>
+        <?php else: ?>
+        <li class="access-restricted"><a href="services.php"><i class="fas fa-tools"></i> Service Requests</a></li>
+        <?php endif; ?>
+        
+        <li><a href="communications.php"><i class="fas fa-comments"></i> Communications</a></li>
+        
+        <?php if (isset($_SESSION['user_role']) && in_array($_SESSION['user_role'], ['administrator', 'airport_manager'])): ?>
+        <li><a href="users.php"><i class="fas fa-users-cog"></i> User Management</a></li>
+        <?php endif; ?>
+        
+        <li><a href="profile.php"><i class="fas fa-user-circle"></i> My Profile</a></li>
+    </ul>
+    
+    <div class="user-role-display">
+        <p><strong>Your Role:</strong> 
+        <span class="role-badge role-<?php echo $_SESSION['user_role']; ?>">
+            <?php echo ucfirst(str_replace('_', ' ', $_SESSION['user_role'])); ?>
+        </span>
+        </p>
+        <p><strong>Airline:</strong> <?php echo $_SESSION['user_airline']; ?></p>
+    </div>
+    
+    <!-- Quick Access Section -->
+    <h3><i class="fas fa-bolt"></i> Quick Access</h3>
+    <ul>
+        <li><a href="services.php?priority=emergency"><i class="fas fa-exclamation-triangle"></i> Emergency Requests</a></li>
+        <li><a href="services.php?status=pending"><i class="fas fa-clock"></i> Pending Services</a></li>
+        <li><a href="flights.php?status=boarding"><i class="fas fa-person-boarding"></i> Boarding Flights</a></li>
+        <li><a href="flights.php?status=delayed"><i class="fas fa-clock"></i> Delayed Flights</a></li>
+    </ul>
+</div>
             
             <div class="main-content">
                 <div class="page-header">
