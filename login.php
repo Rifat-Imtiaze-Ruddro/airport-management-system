@@ -82,12 +82,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <button type="submit" class="btn btn-primary btn-block">Login</button>
             </form>
             
-            <div class="demo-credentials">
+           <!-- <div class="demo-credentials">
                 <p><strong>Demo Credentials:</strong></p>
                 <p>Admin: <strong>admin@airport.com</strong> / <strong>password</strong></p>
                 <p>Airline Staff: <strong>john@americanair.com</strong> / <strong>password</strong></p>
                 <p>Service Staff: <strong>sarah@delta.com</strong> / <strong>password</strong></p>
-            </div>
+            </div> -->
             
             <div class="auth-footer">
                 <p>Don't have an account? <a href="register.php">Register here</a></p>
